@@ -1,16 +1,16 @@
 using System.Reflection;
+using Serilog;
+using Serilog.Context;
+
 public abstract class Plugin
 {
-    public TextWriter OutputWriter { get; set; }
-
     public Plugin()
     {
-        OutputWriter = Console.Out;
     }
 
-    public abstract Task<int> Execute();
+    public abstract Task Execute();
 
-    public async Task<int> ExecuteWithArgs(IEnumerable<string> args)
+    public async Task ExecuteWithArgs(IEnumerable<string> args, IServiceProvider serviceProvider)
     {
         var pluginType = this.GetType();
         Console.WriteLine(pluginType);
@@ -97,7 +97,19 @@ public abstract class Plugin
             }
         }
 
-        return await Execute();
+        var pluginProps = pluginType.GetProperties(BindingFlags.Instance | BindingFlags.FlattenHierarchy | BindingFlags.DeclaredOnly | BindingFlags.NonPublic | BindingFlags.Public);
+	    var requestedServices = pluginProps.Where(p => p.GetCustomAttribute(typeof(RequestServiceAttribute)) != null);
+        foreach (PropertyInfo prop in requestedServices)
+        {
+            prop.SetValue(this, serviceProvider.GetService(prop.PropertyType));
+	    }
+
+        using (LogContext.PushProperty("Source", this.GetType().FullName))
+        {
+            await Execute();
+        }
+
+        return; 
     }
 }
 
@@ -133,5 +145,8 @@ class TaggedArgumentAttribute : System.Attribute
         this.ShortName = ShortName;
         this.HelpText = HelpText;
     }
+}
 
+class RequestServiceAttribute : System.Attribute
+{ 
 }

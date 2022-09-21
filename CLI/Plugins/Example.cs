@@ -19,7 +19,6 @@ namespace SampleConsoleApp
 
         public override async Task<int> Execute()
         {
-            Console.WriteLine($"Executing {PositionalArg1} {PositionalArg2} {Tagged1}");
             return await Task.FromResult<int>(1);
         }
     }

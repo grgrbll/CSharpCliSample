@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLI_Tool", "CLI\CLI_Tool.cs
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{DED5CD6B-8E65-46EF-8626-46AAAC16EDB6}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GbUtil", "GbUtil\GbUtil.csproj", "{231B411C-7DA7-42BE-94D7-E72FB720238D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{DED5CD6B-8E65-46EF-8626-46AAAC16EDB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{DED5CD6B-8E65-46EF-8626-46AAAC16EDB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{DED5CD6B-8E65-46EF-8626-46AAAC16EDB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{231B411C-7DA7-42BE-94D7-E72FB720238D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{231B411C-7DA7-42BE-94D7-E72FB720238D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{231B411C-7DA7-42BE-94D7-E72FB720238D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{231B411C-7DA7-42BE-94D7-E72FB720238D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

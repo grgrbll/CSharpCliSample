@@ -3,59 +3,115 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Linq;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
+using Serilog;
+using Serilog.Extensions.Logging;
+using Serilog.Extensions.Hosting;
+using GbUtil;
 
 namespace SampleConsoleApp
 {
-    class SampleConsoleApp
+
+    public class ConsoleHostedService : IHostedService
     {
-        static IEnumerable<Type> Plugins = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.IsDefined(typeof(PluginDefinitionAttribute)));
+        private IEnumerable<Type> Plugins;
+        private List<string> Args;
+        private IServiceProvider _serviceProvider { get; set; }
 
-        static void PrintHelp()
+        public ConsoleHostedService(IEnumerable<string> args, IServiceProvider serviceProvider)
+        {
+            Args = args.ToList();
+            Plugins = Assembly.GetExecutingAssembly().GetTypes().Where(t => t.IsDefined(typeof(PluginDefinitionAttribute)));
+            _serviceProvider = serviceProvider;
+        }
+
+        void PrintHelp()
         {
 
         }
 
-        static void PrintGroupHelp(string groupName)
+        void PrintGroupHelp(string groupName)
         {
 
         }
 
-        static async Task<int> ExecutePlugin(Type pluginType, IEnumerable<string> args)
+        Task ExecutePlugin(Type pluginType, IEnumerable<string> args)
         {
             Plugin? plugin = Activator.CreateInstance(pluginType) as Plugin;
             if (plugin == null)
                 throw new ApplicationException("Bad plugin type. Must inherit from Plugin.");
-            return await plugin.ExecuteWithArgs(args);
+
+            //plugin.OutputWriter = _serviceProvider?.GetService<TextWriter>();
+            return plugin.ExecuteWithArgs(args, _serviceProvider);
         }
 
+        async Task IHostedService.StartAsync(CancellationToken cancellationToken)
+        {
+            using (new ScopeGuard(delegate { _serviceProvider?.GetService<IHostApplicationLifetime>()?.StopApplication(); }))
+            {
+                if (Args.Count() < 1)
+                {
+                    PrintHelp();
+                    return;
+                }
+
+                string group = Args[0];
+
+                if (Args.Count() < 2)
+                {
+                    PrintGroupHelp(Args[1]);
+                    return;
+                }
+
+                string cmd = Args[1];
+
+                foreach (Type pluginType in Plugins)
+                {
+                    var pluginDefinition = pluginType.GetCustomAttribute<PluginDefinitionAttribute>();
+
+                    if (pluginDefinition == null)
+                        throw new ApplicationException("Bad plugin type. Must inherit from Plugin.");
+
+                    if (pluginDefinition.Group == group && pluginDefinition.Name == cmd)
+                        await ExecutePlugin(pluginType, Args.Skip(2));
+                }
+
+                return;
+            }
+        }
+
+        Task IHostedService.StopAsync(CancellationToken cancellationToken)
+        {
+            // This gets called after IHostApplicationLifetime.StopApplication()
+            return Task.CompletedTask;
+        }
+    }
+
+    class SampleConsoleApp
+    {
         static async Task<int> Main(string[] args)
         {
-            if (args.Length < 1)
+			var serilogConf = new LoggerConfiguration();
+			serilogConf.WriteTo.Console();
+			Log.Logger = serilogConf.CreateLogger();
+
+            Log.Information("Building host.");
+            var builder = new HostBuilder()
+            .UseSerilog()
+            .ConfigureServices((hostContext, services) =>
             {
-                PrintHelp();
-                return 1;
-            }
+                services.AddSingleton<TextWriter>(Console.Out);
+                services.AddHostedService(serviceProvider => 
+		            {
+                        return new ConsoleHostedService(args, serviceProvider.GetService<IServiceProvider>());
+		            });
+            });
+            var host = builder.Build();
 
-            string group = args[0];
-
-            if (args.Length < 2)
-            {
-                PrintGroupHelp(args[1]);
-                return 1;
-            }
-
-            string cmd = args[1];
-
-            foreach (Type pluginType in Plugins)
-            {
-                var pluginDefinition = pluginType.GetCustomAttribute<PluginDefinitionAttribute>();
-
-                if (pluginDefinition == null)
-                    throw new ApplicationException("Bad plugin type. Must inherit from Plugin.");
-
-                if (pluginDefinition.Group == group && pluginDefinition.Name == cmd)
-                    return await ExecutePlugin(pluginType, args.Skip(2));
-            }
+            Log.Information("Running host.");
+            host.Run();
 
             return 0;
         }

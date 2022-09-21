@@ -5,6 +5,9 @@ namespace SampleConsoleApp
     [PluginDefinition("ascii", "to")]
     public class ToAscii : Plugin
     {
+        [RequestService]
+        public TextWriter? Output { get; set; }
+
         [PositionalArgument(0)]
         public string? input { get; set; }
 
@@ -15,7 +18,7 @@ namespace SampleConsoleApp
         {
         }
 
-        public override async Task<int> Execute()
+        public override async Task Execute()
         {
             byte[] bytes = Encoding.ASCII.GetBytes(input);
 
@@ -27,14 +30,14 @@ namespace SampleConsoleApp
                     output = output.Insert(i, " ");
                     i++;
                 }
-                OutputWriter.WriteLine(output);
+                Output?.WriteLine(output);
             }
             else
             {
-                OutputWriter.WriteLine(String.Join(" ", Encoding.ASCII.GetBytes(input).Select(b => b.ToString())));
+                Output?.WriteLine(String.Join(" ", Encoding.ASCII.GetBytes(input).Select(b => b.ToString())));
             }
 
-            return 0;
+            return;
         }
     }
 }
